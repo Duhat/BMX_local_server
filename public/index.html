@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMX Data Parser Control</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(15, 15, 26, 0.9);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+        h1 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .status.active { background: #2c6e4f; }
+        .status.error { background: #8b3a3a; }
+        button {
+            background: #ff6b6b;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ff8c8c;
+            transform: translateY(-1px);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd93d;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        pre {
+            background: #000000aa;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h1>🚴‍♂️ BMX Outscore Parser</h1>
+        <p>Автоматический парсинг данных соревнований и экспорт в Excel</p>
+        <div id="statusBadge" class="status active">✅ Работает</div>
+        <button onclick="refreshData()">🔄 Принудительное обновление</button>
+        <button onclick="downloadExcel()">📊 Скачать Excel</button>
+    </div>
+
+    <div class="card">
+        <h2>📈 Статистика</h2>
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="lastUpdate">—</div>
+                <div class="stat-label">Последнее обновление</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="backupsCount">—</div>
+                <div class="stat-label">Бэкапов создано</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="dataAvailable">—</div>
+                <div class="stat-label">Данные загружены</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📊 Текущие данные (для vMix)</h2>
+        <pre id="currentData">Загрузка...</pre>
+    </div>
+</div>
+
+<script>
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            
+            if (data.lastUpdate) {
+                document.getElementById('lastUpdate').innerText = new Date(data.lastUpdate).toLocaleTimeString();
+            } else {
+                document.getElementById('lastUpdate').innerText = '—';
+            }
+            document.getElementById('backupsCount').innerText = data.backupsCount || 0;
+            document.getElementById('dataAvailable').innerText = data.dataAvailable ? '✅ Да' : '❌ Нет';
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+    
+    async function loadCurrentData() {
+        try {
+            const response = await fetch('/api/current');
+            const data = await response.json();
+            document.getElementById('currentData').innerText = JSON.stringify(data, null, 2);
+        } catch (error) {
+            document.getElementById('currentData').innerText = 'Ошибка загрузки данных';
+        }
+    }
+    
+    async function refreshData() {
+        try {
+            const response = await fetch('/api/refresh', { method: 'POST' });
+            const data = await response.json();
+            alert(data.message);
+            loadStats();
+            loadCurrentData();
+        } catch (error) {
+            alert('Ошибка обновления');
+        }
+    }
+    
+    function downloadExcel() {
+        window.open('/api/download', '_blank');
+    }
+    
+    // Обновляем каждые 5 секунд
+    loadStats();
+    loadCurrentData();
+    setInterval(() => {
+        loadStats();
+        loadCurrentData();
+    }, 5000);
+</script>
+</body>
+</html>
